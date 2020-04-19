@@ -4,6 +4,7 @@
 #include "util.h"
 #include "clause_list.h"
 #include "solvers/backtracking_solver.h"
+#include "solvers/cdcl_solver.h"
 
 using namespace sat_solver;
 
@@ -17,7 +18,7 @@ int main(int argc, char* argv[]) {
 
     if (file_stream.is_open()) {
         ClauseList clause_list = util::read_dimacs(file_stream);
-        BacktrackingSolver solver;
+        CDCLSolver solver;
 
         Assignment assignment;
         SATState is_sat = solver.check(clause_list, &assignment);

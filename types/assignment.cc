@@ -2,6 +2,7 @@
 // Created by Liam Heeger on 2020-04-16.
 //
 
+#include <algorithm>
 #include "assignment.h"
 
 using namespace sat_solver;
@@ -23,6 +24,21 @@ pop_literal(const Literal& literal) {
         return false;
     }
 }
+
+bool
+Assignment::
+pop_literals(std::stack<Literal>& literals) {
+    while(!literals.empty()){
+        if(!pop_literal(literals.top())){
+            return false;
+        }
+
+        literals.pop();
+    }
+
+    return true;
+}
+
 
 bool
 Assignment::
