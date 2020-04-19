@@ -13,7 +13,7 @@ include_directories(types PUBLIC ${CMAKE_SOURCE_DIR}/types/)
 
 add_library(solvers
         solvers/solver.h solvers/solver.cc
-        solvers/backtracking_solver.h solvers/backtracking_solver.cc)
+        solvers/backtracking_solver.h solvers/backtracking_solver.cc solvers/dpll_solver.cc solvers/dpll_solver.h solvers/cdcl_solver.cc solvers/cdcl_solver.h)
 include_directories(solvers PUBLIC ${CMAKE_SOURCE_DIR}/solvers/)
 
 add_executable(sat_solvers main.cpp util.h util.cc)
