@@ -62,6 +62,7 @@ backtrack_call(const ClauseList& clause_list, Assignment* assignment) {
         // Backtrack!
         return sat_state;
     } else if (sat_state == SATState::UNDEF){
+
         Variable var(0);
         if (get_unassigned_variable(clause_list, *assignment, &var)) {
             Literal pos_literal(false, var);

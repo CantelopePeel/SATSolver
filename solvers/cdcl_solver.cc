@@ -132,5 +132,3 @@ check(const ClauseList& clause_list, Assignment* assignment) {
 
     return is_sat;
 }
-
-
