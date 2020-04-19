@@ -17,6 +17,7 @@ add_library(solvers
         solvers/backtracking_solver.h solvers/backtracking_solver.cc
         solvers/cdcl_solver.h solvers/cdcl_solver.cc)
 include_directories(solvers PUBLIC ${CMAKE_SOURCE_DIR}/solvers/)
+target_link_libraries(solvers LINK_PUBLIC types)
 
 add_executable(sat_solvers main.cpp util.h util.cc)
 
