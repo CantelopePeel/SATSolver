@@ -13,6 +13,13 @@ using namespace sat_solver;
 ClauseList::ClauseList()
         : clauses_(), variables_() {}
 
+ClauseList::ClauseList(const ClauseList &cll) {
+  for (Clause &cl: cll.clauses_)
+    add_clause(cl); // should call copy constructor...
+  for (Variable &v: cll.variables_)
+    add_variable(v);
+}
+
 void ClauseList::add_clause(Clause clause) {
     for (const Literal& lit : clause.literals()) {
         Variable var = lit.to_variable();
