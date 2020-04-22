@@ -18,6 +18,7 @@ add_library(solvers
         solvers/cdcl_solver.h solvers/cdcl_solver.cc
         solvers/dpll_solver.cc solvers/dpll_solver.h)
 include_directories(solvers PUBLIC ${CMAKE_SOURCE_DIR}/solvers/)
+target_link_libraries(solvers LINK_PUBLIC types)
 
 add_executable(sat_solvers main.cpp util.h util.cc)
 
