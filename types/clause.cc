@@ -36,7 +36,9 @@ contains(const Literal& literal) const {
     return literal_set_.count(literal) == 1;
 }
 
-size_t size() const {
+size_t
+Clause::
+size() const {
   return literal_set_.size();
 }
 

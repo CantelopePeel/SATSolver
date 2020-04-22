@@ -17,6 +17,7 @@ class Clause {
         void add_literal(const Literal& literal);
         bool remove_literal(const Literal& literal);
         bool contains(const Literal& literal) const;
+        bool purge_literal(const Literal& literal);
         size_t size() const;
 
         inline const std::unordered_set<Literal>& literals() const { return literal_set_; };

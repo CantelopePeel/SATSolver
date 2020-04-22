@@ -14,4 +14,4 @@ class schoningSolver : public Solver {
 }
 
 
-#endif 
+#endif // SATSOLVER_SCHONING_SOLVER_H   
