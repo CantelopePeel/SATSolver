@@ -44,53 +44,70 @@ add_edge(const Literal& start, const Literal& end){
     end_node.incoming_adjacency_list_.push_back(&start_node);
 }
 
+bool
+propagate_clauses(const ClauseList& clause_list, Assignment* assignment,
+                  const Clause* prop_clause, Literal* assigned_literal){
+    for (const Clause& clause : clause_list.clauses()) {
+        if(get_single_unassigned_lit_in_clause(clause, assignment, assigned_literal)){
+            prop_clause = &clause;
+            // assigned_literal had its pointed memory value modified in the function call.
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void
 ImplicationGraph::
 unit_propagate(const ClauseList& clause_list, Assignment* assignment,
-               std::stack<Literal>* assigned_literals,
-               std::unordered_set<Variable>* rollback_variables){
-    bool new_propagation = false;
+               std::stack<Literal>& assigned_literals,
+               std::unordered_set<Variable>& rollback_variables){
+    bool found_new_lit = false;
     do {
-        new_propagation = false;
+        found_new_lit = false;
         const Clause* propagated_clause;
-        Literal* single_literal = NULL;
+        Literal* new_lit = NULL;
 
-        for (const Clause& clause : clause_list.clauses()) {
-            if(get_single_unassigned_lit_in_clause(clause, assignment, single_literal)){
-                new_propagation = true;
-                propagated_clause = &clause;
-                break;
-            }
+        found_new_lit = propagate_clauses(
+            clause_list, assignment, propagated_clause, new_lit
+        );
+        if(!found_new_lit){
+            found_new_lit = propagate_clauses(
+                implied_clauses_, assignment, propagated_clause, new_lit
+            );
         }
 
-        if(new_propagation){
-            assignment->push_literal(*single_literal);
-            assigned_literals->push(*single_literal);
+        if(found_new_lit){
+            assignment->push_literal(*new_lit);
+            assigned_literals.push(*new_lit);
 
             for(const Literal& lit : propagated_clause->literals()){
-                if(lit.value() != single_literal->value()){
-                    add_edge(lit, *single_literal);
+                if(lit.value() != new_lit->value()){
+                    add_edge(lit, *new_lit);
                 }
             }
 
             if(
-                    assignment->contains(*single_literal) &&
-                    assignment->contains(single_literal->negate())
+                assignment->contains(*new_lit) &&
+                assignment->contains(new_lit->negate())
             ){
                 // A collision has occurred, and a cut clause will be added.
                 Clause new_clause;
 
-                for(const Node* node : get_node_of_literal(*single_literal).incoming_adjacency_list()){
+                for(const Node* node : get_node_of_literal(*new_lit).incoming_adjacency_list()){
                     new_clause.add_literal(node->lit_.negate());
                 }
-                for(const Node* node : get_node_of_literal(single_literal->negate()).incoming_adjacency_list()){
+                for(const Node* node : get_node_of_literal(new_lit->negate()).incoming_adjacency_list()){
                     new_clause.add_literal(node->lit_.negate());
                 }
 
-                clause_list.add_clause(new_clause);
+                for(const Literal& variable : new_clause.literals()){
+                    rollback_variables.insert(variable.to_variable());
+                }
+
+                implied_clauses_.add_clause(new_clause);
             }
         }
-
-
-    } while(new_propagation);
+    } while(found_new_lit);
 }
