@@ -34,7 +34,7 @@ int run_file_mode(int argc, char* argv[]) {
     }
 
     std::ifstream file_stream;
-    file_stream.open(argv[1], std::ios_base::in);
+    file_stream.open(argv[2], std::ios_base::in);
 
     if (file_stream.is_open()) {
         ClauseList clause_list = util::read_dimacs(file_stream);
