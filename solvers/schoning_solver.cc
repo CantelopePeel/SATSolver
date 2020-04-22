@@ -71,7 +71,11 @@ SATState
 schoningSolver::
     check(const ClauseList &clause_list, Assignment *assignment)
 {
-    int number_of_clauses = clause_list.num_clauses;
+    const long unsigned int number_of_clauses = clause_list.num_clauses();
+    //while there is an unassigned variable in the clause list, reassign it randomly between true and false.
+    Variable var(0);
+    while (get_unassigned_variable(clause_list, *assignment, &var)) {}
+    
 
     return UNDEF;
 }

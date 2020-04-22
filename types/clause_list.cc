@@ -14,9 +14,9 @@ ClauseList::ClauseList()
         : clauses_(), variables_() {}
 
 ClauseList::ClauseList(const ClauseList &cll) {
-  for (Clause &cl: cll.clauses_)
+  for (const Clause &cl: cll.clauses_)
     add_clause(cl); // should call copy constructor...
-  for (Variable &v: cll.variables_)
+  for (const Variable &v: cll.variables_)
     add_variable(v);
 }
 
