@@ -82,7 +82,7 @@ flip(const ClauseList &clause_list, Assignment* assignment)
         // we pick a random literal and push it to the assignment, and remove its negation from the assignment.
         if (unsat_clause) {
 
-            auto stop_point = rand() % (clause.literals().size() + 1);
+            auto stop_point = rand() % (clause.literals().size());
             int index = 0;
             for (const Literal& literal : clause.literals())
             {
@@ -122,8 +122,7 @@ schoningSolver::
             assignment->push_literal(neg_literal);
         }
     }
-
-    for (int i = 0; i < num_vars * 80; i++)
+    for (int i = 0; i < num_vars * 3; i++)
     {
         SATState sat_state = determine_sat_state(clause_list, *assignment);
         if (sat_state == SATState::SAT)
