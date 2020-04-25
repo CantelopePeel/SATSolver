@@ -40,7 +40,7 @@ namespace std
 {
 template<> struct hash<sat_solver::Literal>
 {
-    std::size_t operator()(sat_solver::Literal const& literal) const noexcept
+    std::size_t operator()(const sat_solver::Literal& literal) const noexcept
     {
         return literal.value();
     }

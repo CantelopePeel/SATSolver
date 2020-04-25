@@ -55,18 +55,23 @@ determine_sat_state(const ClauseList& clause_list, const Assignment& assignment)
     return SATState::SAT;
 }
 
-static SATState
+SATState
+BacktrackingSolver::
+check(const ClauseList& clause_list, Assignment* assignment) {
+    SATState is_sat = backtrack_call(clause_list, assignment);
+    return is_sat;
+}
+
+SATState
+BacktrackingSolver::
 backtrack_call(const ClauseList& clause_list, Assignment* assignment) {
     SATState sat_state = determine_sat_state(clause_list, *assignment);
-    if (sat_state == SATState::UNSAT) {
-        // Backtrack!
-        return sat_state;
-    } else if (sat_state == SATState::UNDEF){
-
+    if (sat_state == SATState::UNDEF) {
         Variable var(0);
         if (get_unassigned_variable(clause_list, *assignment, &var)) {
             Literal pos_literal(false, var);
             assignment->push_literal(pos_literal);
+            increment_decision_counter();
             SATState pos_sat_state = backtrack_call(clause_list, assignment);
             if (pos_sat_state == SATState::SAT) {
                 return pos_sat_state;
@@ -75,6 +80,7 @@ backtrack_call(const ClauseList& clause_list, Assignment* assignment) {
 
             Literal neg_literal(true, var);
             assignment->push_literal(neg_literal);
+            increment_decision_counter();
             SATState neg_sat_state = backtrack_call(clause_list, assignment);
             if (neg_sat_state == SATState::SAT) {
                 return neg_sat_state;
@@ -86,6 +92,9 @@ backtrack_call(const ClauseList& clause_list, Assignment* assignment) {
             // Should be impossible to get here.
             return SATState::UNSAT;
         }
+    } if (sat_state == SATState::UNSAT) {
+        // Backtrack!
+        return sat_state;
     } else if (sat_state == SATState::SAT){
         return sat_state;
     } else {
@@ -93,12 +102,3 @@ backtrack_call(const ClauseList& clause_list, Assignment* assignment) {
         return SATState::UNSAT;
     }
 }
-
-SATState
-BacktrackingSolver::
-check(const ClauseList& clause_list, Assignment* assignment) {
-    SATState is_sat = backtrack_call(clause_list, assignment);
-    return is_sat;
-}
-
-
