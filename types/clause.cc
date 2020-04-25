@@ -47,11 +47,7 @@ Clause::
 to_str() const {
     std::string clause_str = "{ ";
     for (const auto& lit : literal_set_) {
-        if (lit.sign()) {
-            clause_str += "-";
-        }
-        clause_str += std::to_string(lit.to_variable().value() + 1);
-        clause_str += " ";
+        clause_str += lit.to_str() + " ";
     }
     clause_str += "}";
     return clause_str;

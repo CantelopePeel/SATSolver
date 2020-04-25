@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <functional>
 #include "variable.h"
+#include <string>
 
 namespace sat_solver {
 
@@ -28,6 +29,13 @@ class Literal {
         Literal negate() const;
 
         inline bool operator==(const Literal& other) const { return literal_value_ == other.literal_value_; }
+        std::string to_str() const {
+          std::string str;
+          if (sign())
+            str += "-";
+          str += std::to_string(to_variable().value() + 1);
+          return str;
+        }
 
     private:
         unsigned int literal_value_;
