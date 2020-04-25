@@ -92,8 +92,7 @@ find_pure_literals(std::vector<Clause> &cll,
 static
 SATState
 check(const std::vector<Clause> &ClauseList,
-    Assignment* assignment, 
-    std::unordered_set<Variable> available) {
+    Assignment* assignment) {
   std::vector<Clause> cll(ClauseList);
   if (ClauseList.size() == 0) return SAT;
   if (check_satisfied(cll, assignment) == SAT)
@@ -117,7 +116,6 @@ check(const std::vector<Clause> &ClauseList,
           // if we have a singleton clause, force the assignment
           Literal l = *cl.literals().begin();
           ll.push_back(l);
-          available.erase(l.to_variable());
 #if DEBUG
           std::cout << "Resolving singleton clause " << l.to_str() << "\n";
 #endif
@@ -134,24 +132,20 @@ break_out:;
   for(Literal l: pures) {
     auto pur_filter = [l](Clause &c) { return c.literals().find(l) != c.literals().end(); };
     cll.erase(std::remove_if(cll.begin(), cll.end(), pur_filter), cll.end());
-    available.erase(l.to_variable());
     ll.push_back(l);
 #if DEBUG
     std::cout << l.to_str() << " is pure\n";
 #endif
   }
-
-  Variable next_variable = *(available.begin()); 
-  Literal  next_literal(0, next_variable);
+  Literal next_literal = *((*(cll.begin())).literals().begin()); 
 #if DEBUG
   std::cout << "Choosing literal " << next_literal.to_str() << "\n";
 #endif
-  available.erase(next_variable);
 
   std::vector<Clause> cpy = cll;
   simplify_clauses(cpy, next_literal); 
 
-  if (check(cpy, assignment, available) == SAT){
+  if (check(cpy, assignment) == SAT){
     for(Literal l: ll) assignment->push_literal(l);
     return SAT;
   }
@@ -162,7 +156,7 @@ break_out:;
   cpy = cll;
   simplify_clauses(cpy, next_literal.negate());
 
-  if (check(cpy, assignment, available) == SAT){
+  if (check(cpy, assignment) == SAT){
     for(Literal l: ll) assignment->push_literal(l);
     return SAT;
   }
@@ -174,6 +168,5 @@ SATState
 DPLLSolver::
 check(const sat_solver::ClauseList& clause_list, sat_solver::Assignment* assignment) {
   assert(clause_list.num_clauses() != 0);
-  std::unordered_set<Variable> available = clause_list.variables();
-  return ::check(clause_list.clauses(), assignment, available);
+  return ::check(clause_list.clauses(), assignment);
 }
