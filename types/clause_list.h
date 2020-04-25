@@ -20,8 +20,8 @@ class ClauseList {
         bool validate_clause_list();
         bool check_satisfied(const Assignment& assignment) const;
 
-        const std::vector <Clause>& clauses() const { return clauses_; };
-        const std::unordered_set <Variable>& variables() const { return variables_; };
+        const std::vector<Clause>& clauses() const { return clauses_; };
+        const std::unordered_set<Variable>& variables() const { return variables_; };
 
         const unsigned long num_clauses() const { return clauses_.size(); };
         const unsigned long num_variables() const { return variables_.size(); };

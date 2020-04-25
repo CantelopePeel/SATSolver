@@ -13,6 +13,8 @@ class BacktrackingSolver : public Solver {
     public:
         SATState check(const ClauseList& clause_list, Assignment* assignment) override;
 
+    private:
+        SATState backtrack_call(const ClauseList& clause_list, Assignment* assignment);
 };
 
 }

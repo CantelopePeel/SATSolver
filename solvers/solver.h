@@ -14,6 +14,11 @@ namespace sat_solver {
 class Solver {
     public:
         virtual SATState check(const ClauseList& clause_list, Assignment* assignment) = 0;
+
+        inline void increment_decision_counter() { decision_counter_++; };
+        inline const unsigned int decision_counter() { return decision_counter_; };
+    private:
+        unsigned int decision_counter_ = 0;
 };
 
 }
