@@ -14,6 +14,7 @@ namespace sat_solver {
 class ClauseList {
     public:
         ClauseList();
+        ClauseList(const ClauseList &cl);
         void add_clause(Clause clause);
         void add_variable(const Variable& variable);
         bool validate_clause_list();

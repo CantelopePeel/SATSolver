@@ -7,6 +7,7 @@
 
 #include <deque>
 #include <unordered_set>
+#include <stack>
 #include "literal.h"
 
 namespace sat_solver {
@@ -21,6 +22,7 @@ class Assignment {
     public:
         void push_literal(const Literal& literal);
         bool pop_literal(const Literal& literal);
+        bool pop_literals(std::stack<Literal>& literals);
         bool remove_literal(const Literal& literal);
 
         bool contains(const Literal& literal) const;

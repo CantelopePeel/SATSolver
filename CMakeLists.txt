@@ -10,13 +10,18 @@ add_library(types
         types/literal.h types/literal.cc
         types/clause.h types/clause.cc
         types/clause_list.h types/clause_list.cc
-        types/assignment.cc types/assignment.h)
+        types/assignment.h types/assignment.cc
+        types/implication_graph.h types/implication_graph.cc)
 include_directories(types PUBLIC ${CMAKE_SOURCE_DIR}/types/)
 
 add_library(solvers
         solvers/solver.h solvers/solver.cc
-        solvers/backtracking_solver.h solvers/backtracking_solver.cc solvers/dpll_solver.cc solvers/dpll_solver.h solvers/cdcl_solver.cc solvers/cdcl_solver.h)
+        solvers/backtracking_solver.h solvers/backtracking_solver.cc
+        solvers/cdcl_solver.h solvers/cdcl_solver.cc
+        solvers/dpll_solver.cc solvers/dpll_solver.h
+        solvers/schoning_solver.cc solvers/schoning_solver.h)
 include_directories(solvers PUBLIC ${CMAKE_SOURCE_DIR}/solvers/)
+target_link_libraries(solvers LINK_PUBLIC types)
 
 add_executable(sat_solvers main.cpp util.h util.cc)
 

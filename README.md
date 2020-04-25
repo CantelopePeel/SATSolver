@@ -12,5 +12,5 @@ make
 ### Run Instructions
 Run:
 ```
-./sat_solvers ../cnf/simple_v3_c2.cnf
+./sat_solvers file ../cnf/simple_v3_c2.cnf
 ```

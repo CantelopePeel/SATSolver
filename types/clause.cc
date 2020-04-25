@@ -22,10 +22,24 @@ remove_literal(const Literal& literal) {
     return literal_set_.erase(literal) == 1;
 }
 
+// if we resolve x_1 as true, we may want to purge all
+// instances of x_1 and ~x_1 from the clause
+bool
+Clause::
+purge_literal(const Literal& literal) {
+  return literal_set_.erase(literal) || literal_set_.erase(literal.negate());
+}
+
 bool
 Clause::
 contains(const Literal& literal) const {
     return literal_set_.count(literal) == 1;
+}
+
+size_t
+Clause::
+size() const {
+  return literal_set_.size();
 }
 
 std::string
@@ -42,3 +56,4 @@ to_str() const {
     clause_str += "}";
     return clause_str;
 }
+
