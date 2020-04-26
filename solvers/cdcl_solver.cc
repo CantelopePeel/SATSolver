@@ -7,10 +7,12 @@ using namespace sat_solver;
 
 static bool
 get_unassigned_variable(const ClauseList& clause_list, const Assignment& assignment, Variable* variable) {
-    for (Variable var : clause_list.variables()) {
-        if (!assignment.contains(var)) {
-            *variable = var;
-            return true;
+    for(const Clause& clause : clause_list.clauses()){
+        for(const Literal& lit : clause.literals()){
+            if(!assignment.contains(lit.to_variable())){
+                *variable = lit.to_variable();
+                return true;
+            }
         }
     }
     return false;
@@ -33,30 +35,34 @@ static bool should_continue_backtracking(const Clause* clause, Assignment* assig
     //     2. If we remove all recent_literals from assignment, then we should not be able to unit propagate.
 
     int unassigned_literals_found = 0;
-    int recent_literals_found = 0;
     for(const Literal& lit: clause->literals()){
-        if(!assignment->contains(lit.to_variable())){
+        if(assignment->contains(lit)){
+            return false;
+        } else if(assignment->contains(lit.negate())){
             unassigned_literals_found++;
         }
     }
 
+    int unassigned_literals_found_before_recent = unassigned_literals_found;
     for(const Literal& lit : recent_literals){
-        if(clause->contains(lit.negate())){
-            recent_literals_found++;
+        assert(assignment->contains(lit));
+
+        if(clause->contains(lit.to_variable())){
+            unassigned_literals_found_before_recent--;
         }
     }
 
     for(const Literal& lit : assignment->literals()){
-    	if(assignment->contains(lit) && assignment->contains(lit.negate())){
-    		return true;
-    	}
+        if(assignment->contains(lit) && assignment->contains(lit.negate())){
+            return true;
+        }
     }
 
     if(clause->literals().size() == 1){
-    	return (unassigned_literals_found == 0);
+        return (unassigned_literals_found == 0);
     }
 
-    return (unassigned_literals_found == 0) or ((unassigned_literals_found == 1) and (recent_literals_found == 0));
+    return false;
 }
 
 static SATState
@@ -100,18 +106,18 @@ static SATState
 backtrack_call(const ClauseList& clause_list, Assignment* assignment,
                ImplicationGraph& implication_graph,
                const Clause*& rollback_clause, int depth = 0) {
-	std::vector<Literal> recent_literals;
-	implication_graph.unit_propagate(assignment, recent_literals, rollback_clause);
+    std::vector<Literal> recent_literals;
+    implication_graph.unit_propagate(assignment, recent_literals, rollback_clause);
 
-	if(rollback_clause != NULL){
-		pop_literals(assignment, recent_literals);
+    if(rollback_clause != NULL){
+        pop_literals(assignment, recent_literals);
 
-		return SATState::UNSAT;
-	}
+        return SATState::UNSAT;
+    }
 
-	SATState sat_state = determine_sat_state(clause_list, *assignment);
+    SATState sat_state = determine_sat_state(clause_list, *assignment);
     if (sat_state == SATState::UNSAT) {
-		pop_literals(assignment, recent_literals);
+        pop_literals(assignment, recent_literals);
         // Backtrack!
         return sat_state;
     } else if (sat_state == SATState::UNDEF){
@@ -121,9 +127,8 @@ backtrack_call(const ClauseList& clause_list, Assignment* assignment,
             Literal literal_choices[] = {Literal(false, var), Literal(true, var)};
 
             for(int i = 0; i < 2; i++){
-            	Literal& lit = literal_choices[i];
+                Literal& lit = literal_choices[i];
                 assignment->push_literal(lit);
-                recent_literals.push_back(lit);
 
                 SATState sat_state = backtrack_call(clause_list, assignment, implication_graph, rollback_clause, depth + 1);
 
@@ -137,11 +142,12 @@ backtrack_call(const ClauseList& clause_list, Assignment* assignment,
                     // We inspect the rollback clause, and see if we should stop backtracking
                     // at the current level.
 
-                    if(should_continue_backtracking(rollback_clause, assignment, recent_literals, implication_graph)){
-						pop_literals(assignment, recent_literals);
+                   if(should_continue_backtracking(rollback_clause, assignment, recent_literals, implication_graph)){
+                       assignment->pop_literal(lit);
+                       pop_literals(assignment, recent_literals);
 
-                        return SATState::UNSAT;
-                    }
+                       return SATState::UNSAT;
+                   }
 
                 }
 
@@ -149,13 +155,13 @@ backtrack_call(const ClauseList& clause_list, Assignment* assignment,
             }
         }
 
-		pop_literals(assignment, recent_literals);
+        pop_literals(assignment, recent_literals);
 
         return SATState::UNSAT;
     } else if (sat_state == SATState::SAT){
         return sat_state;
     } else {
-		pop_literals(assignment, recent_literals);
+        pop_literals(assignment, recent_literals);
         // Again impossible to get here.
         return SATState::UNSAT;
     }
