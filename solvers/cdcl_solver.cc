@@ -31,7 +31,7 @@ static bool should_continue_backtracking(const Clause* clause, Assignment* assig
     for(const Literal& lit: clause->literals()){
         if(assignment->contains(lit)){
             return false;
-        } else if(assignment->contains(lit.negate())){
+        } else if(!assignment->contains(lit.negate())){
             unassigned_literals_found++;
         }
     }
@@ -52,9 +52,7 @@ static bool should_continue_backtracking(const Clause* clause, Assignment* assig
         }
     }
 
-    // If we can unit propagate now, and we can unit propagate above,
-    // then we backtrack to the upper level.
-    return (unassigned_literals_found == 1) and (unassigned_literals_found_before_recent == 1);
+    return false;
 }
 
 static SATState
@@ -136,13 +134,11 @@ backtrack_call(const ClauseList& clause_list, Assignment* assignment,
                     // We inspect the rollback clause, and see if we should stop backtracking
                     // at the current level.
 
-                   if(should_continue_backtracking(rollback_clause, assignment, recent_literals, implication_graph)){
-                       assignment->pop_literal(lit);
-                       pop_literals(assignment, recent_literals);
+                    if(should_continue_backtracking(rollback_clause, assignment, recent_literals, implication_graph)){
+                        pop_literals(assignment, recent_literals);
 
-                       return SATState::UNSAT;
-                   }
-
+                        return SATState::UNSAT;
+                    }
                 }
 
                 assignment->pop_literal(lit);
