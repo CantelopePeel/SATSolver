@@ -147,7 +147,7 @@ int run_gen_mode(int argc, char* argv[]) {
                 end = std::chrono::high_resolution_clock::now();
                 execution_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 
-                outfile_stream << scho_solver.decision_counter() << "," << sat_state_str(scho_state) << "," << execution_time << ",";
+                outfile_stream << scho_solver.decision_counter() << "," << sat_state_str(scho_state) << "," << execution_time;
 
                 outfile_stream << std::endl;
             }
