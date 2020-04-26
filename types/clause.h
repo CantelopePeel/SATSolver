@@ -18,6 +18,7 @@ class Clause {
         bool remove_literal(const Literal& literal);
 
         bool contains(const Literal& literal) const;
+        bool contains(const Variable& variable) const;
 
         inline const std::unordered_set<Literal>& literals() const { return literal_set_; };
 

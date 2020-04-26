@@ -28,6 +28,16 @@ contains(const Literal& literal) const {
     return literal_set_.count(literal) == 1;
 }
 
+bool
+Clause::
+contains(const Variable& variable) const {
+    for(const Literal& lit : literal_set_)
+        if(lit.to_variable() == variable)
+            return true;
+
+    return false;
+}
+
 std::string
 Clause::
 to_str() const {
