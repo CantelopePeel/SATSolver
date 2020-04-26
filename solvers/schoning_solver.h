@@ -5,9 +5,10 @@
 
 namespace sat_solver {
 
-class schoningSolver : public Solver {
+class SchoningSolver : public Solver {
     public:
         SATState check(const ClauseList& clause_list, Assignment* assignment) override;
+        void flip(const ClauseList &clause_list, Assignment* assignment);
 
 };
 

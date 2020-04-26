@@ -89,19 +89,20 @@ find_pure_literals(std::vector<Clause> &cll,
 }
 
 
-static
+
 SATState
-check(const std::vector<Clause> &ClauseList,
+DPLLSolver::
+check_call(const std::vector<Clause> &clause_list,
     Assignment* assignment) {
-  std::vector<Clause> cll(ClauseList);
-  if (ClauseList.size() == 0) return SAT;
+  std::vector<Clause> cll(clause_list);
+  if (clause_list.size() == 0) return SAT;
   if (check_satisfied(cll, assignment) == SAT)
     return SAT;
   std::vector<Literal> ll;
   bool made_changes = true;
   while (made_changes){
 #if DEBUG
-    print(ClauseList);
+    print(clause_list);
 #endif
     made_changes = false;
     for (Clause &cl: cll){
@@ -145,8 +146,11 @@ break_out:;
   std::vector<Clause> cpy = cll;
   simplify_clauses(cpy, next_literal); 
 
-  if (check(cpy, assignment) == SAT){
-    for(Literal l: ll) assignment->push_literal(l);
+  if (check_call(cpy, assignment) == SAT){
+    for (Literal l: ll) { 
+        assignment->push_literal(l);
+        increment_decision_counter();
+    }
     return SAT;
   }
 
@@ -156,8 +160,11 @@ break_out:;
   cpy = cll;
   simplify_clauses(cpy, next_literal.negate());
 
-  if (check(cpy, assignment) == SAT){
-    for(Literal l: ll) assignment->push_literal(l);
+  if (check_call(cpy, assignment) == SAT){
+    for (Literal l: ll) { 
+        assignment->push_literal(l);
+        increment_decision_counter();
+    }
     return SAT;
   }
 
@@ -168,5 +175,5 @@ SATState
 DPLLSolver::
 check(const sat_solver::ClauseList& clause_list, sat_solver::Assignment* assignment) {
   assert(clause_list.num_clauses() != 0);
-  return ::check(clause_list.clauses(), assignment);
+  return check_call(clause_list.clauses(), assignment);
 }

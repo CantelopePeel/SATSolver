@@ -3,7 +3,7 @@ project(SATSolver)
 
 set(CMAKE_CXX_STANDARD 14)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3")
 
 add_library(types
         types/variable.h types/variable.cc

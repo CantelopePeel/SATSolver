@@ -55,7 +55,8 @@ determine_sat_state(const ClauseList& clause_list, const Assignment& assignment)
     return SATState::SAT;
 }
 
-static void
+void
+SchoningSolver::
 flip(const ClauseList &clause_list, Assignment* assignment)
 {
     //look through all clauses
@@ -89,8 +90,9 @@ flip(const ClauseList &clause_list, Assignment* assignment)
                 if (index == stop_point)
                 {    
                     //pick a literal and flip its value
-                    assignment-> remove_literal(literal.negate());            
+                    assignment->remove_literal(literal.negate());            
                     assignment->push_literal(literal);
+                    increment_decision_counter();
                     return;
                 }
                 index++;
@@ -102,7 +104,7 @@ flip(const ClauseList &clause_list, Assignment* assignment)
 }
 
 SATState
-schoningSolver::
+SchoningSolver::
     check(const ClauseList &clause_list, Assignment *assignment)
 {
     const long unsigned int num_vars = clause_list.num_variables();
@@ -115,11 +117,13 @@ schoningSolver::
         {
             Literal pos_literal(false, var);
             assignment->push_literal(pos_literal);
+            increment_decision_counter();
         }
         else
         {
             Literal neg_literal(true, var);
             assignment->push_literal(neg_literal);
+            increment_decision_counter();
         }
     }
     for (int i = 0; i < num_vars * 3; i++)

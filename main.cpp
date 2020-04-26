@@ -7,6 +7,7 @@
 #include "solvers/backtracking_solver.h"
 #include "solvers/cdcl_solver.h"
 #include "solvers/dpll_solver.h"
+#include "solvers/schoning_solver.h"
 
 using namespace sat_solver;
 
@@ -91,7 +92,7 @@ int run_gen_mode(int argc, char* argv[]) {
 
         for (int num_clause = 1; num_clause < num_clauses + 1; num_clause++) {
             for (int trial = 0; trial < trials; trial++) {
-                if (case_counter % 10000 == 0) {
+                if (case_counter % 1000 == 0) {
                     std::printf("CASE: %d/%d \n", case_counter, num_cases);
                 }
                 ClauseList trial_clause_list(var_clause_list);
@@ -112,6 +113,25 @@ int run_gen_mode(int argc, char* argv[]) {
                 SATState bt_state = bt_solver.check(trial_clause_list, &bt_assn);
 
                 outfile_stream << bt_solver.decision_counter() << "," << sat_state_str(bt_state) << ",";
+                
+                Assignment cdcl_assn;
+                CDCLSolver cdcl_solver;
+                SATState cdcl_state = cdcl_solver.check(trial_clause_list, &cdcl_assn);
+
+                outfile_stream << cdcl_solver.decision_counter() << "," << sat_state_str(cdcl_state) << ",";
+                
+                Assignment dpll_assn;
+                DPLLSolver dpll_solver;
+                SATState dpll_state = dpll_solver.check(trial_clause_list, &dpll_assn);
+
+                outfile_stream << dpll_solver.decision_counter() << "," << sat_state_str(dpll_state) << ",";
+                
+                Assignment scho_assn;
+                SchoningSolver scho_solver;
+                SATState scho_state = scho_solver.check(trial_clause_list, &scho_assn);
+
+                outfile_stream << scho_solver.decision_counter() << "," << sat_state_str(scho_state) << ",";
+                
                 outfile_stream << std::endl;
             }
         }
