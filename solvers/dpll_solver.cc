@@ -4,6 +4,7 @@
 //
 
 #include "dpll_solver.h"
+#include <unordered_set>
 #include <algorithm>
 #include <cassert>
 #include <iostream>

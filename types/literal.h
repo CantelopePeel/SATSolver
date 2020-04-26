@@ -28,6 +28,7 @@ class Literal {
 
         Literal negate() const;
 
+        inline bool operator<(const Literal& other) const { return literal_value_ < other.literal_value_; }
         inline bool operator==(const Literal& other) const { return literal_value_ == other.literal_value_; }
         std::string to_str() const {
           std::string str;

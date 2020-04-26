@@ -21,14 +21,14 @@ class ClauseList {
         bool check_satisfied(const Assignment& assignment) const;
 
         const std::vector<Clause>& clauses() const { return clauses_; };
-        const std::unordered_set<Variable>& variables() const { return variables_; };
+        const std::set<Variable>& variables() const { return variables_; };
 
         const unsigned long num_clauses() const { return clauses_.size(); };
         const unsigned long num_variables() const { return variables_.size(); };
 
     protected:
         std::vector<Clause> clauses_;
-        std::unordered_set<Variable> variables_;
+        std::set<Variable> variables_;
 };
 
 }
