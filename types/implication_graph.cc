@@ -110,7 +110,7 @@ unit_propagate(Assignment* assignment,
     // (A clause is unsatisfiable w.r.t a partial assignment if all of the variables are
     //  assigned, but the clause is still false).
 
-    if (find_unsatisfiable_clause(clauses_, assignment)) {
+    if (find_unsatisfiable_clause(clauses_, assignment, rollback_clause)) {
         return;
     }
 
