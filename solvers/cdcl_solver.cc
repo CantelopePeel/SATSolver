@@ -1,6 +1,5 @@
 #include <iostream>
 #include <cassert>
-#include "../types/implication_graph.h"
 #include "cdcl_solver.h"
 
 using namespace sat_solver;
@@ -102,12 +101,14 @@ determine_sat_state(const ClauseList& clause_list, const Assignment& assignment)
     return SATState::SAT;
 }
 
-static SATState
+SATState
+CDCLSolver::
 backtrack_call(const ClauseList& clause_list, Assignment* assignment,
                ImplicationGraph& implication_graph,
-               const Clause*& rollback_clause, int depth = 0) {
+               const Clause*& rollback_clause, int depth) {
     std::vector<Literal> recent_literals;
     implication_graph.unit_propagate(assignment, recent_literals, rollback_clause);
+    decision_counter_ += recent_literals.size();
 
     if(rollback_clause != NULL){
         pop_literals(assignment, recent_literals);
@@ -129,7 +130,7 @@ backtrack_call(const ClauseList& clause_list, Assignment* assignment,
             for(int i = 0; i < 2; i++){
                 Literal& lit = literal_choices[i];
                 assignment->push_literal(lit);
-
+                increment_decision_counter();
                 SATState sat_state = backtrack_call(clause_list, assignment, implication_graph, rollback_clause, depth + 1);
 
                 if (sat_state == SATState::SAT) {

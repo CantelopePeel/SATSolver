@@ -17,7 +17,7 @@ class Solver {
 
         inline void increment_decision_counter() { decision_counter_++; };
         inline const unsigned int decision_counter() { return decision_counter_; };
-    private:
+    protected:
         unsigned int decision_counter_ = 0;
 };
 
