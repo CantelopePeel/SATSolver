@@ -6,7 +6,7 @@
 #define SATSOLVER_ASSIGNMENT_H
 
 #include <deque>
-#include <unordered_set>
+#include <set>
 #include <stack>
 #include "literal.h"
 
@@ -28,11 +28,11 @@ class Assignment {
         bool contains(const Literal& literal) const;
         bool contains(const Variable& variable) const;
 
-        inline const std::unordered_set<Literal>& literals() const { return literal_set_; };
+        inline const std::set<Literal>& literals() const { return literal_set_; };
         inline const unsigned long size() const { return literal_set_.size(); };
 
     protected:
-        std::unordered_set<Literal> literal_set_;
+        std::set<Literal> literal_set_;
         std::deque<Literal> trail_;
 
 };
