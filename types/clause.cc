@@ -40,6 +40,15 @@ size_t
 Clause::
 size() const {
   return literal_set_.size();
+
+bool
+Clause::
+contains(const Variable& variable) const {
+    for(const Literal& lit : literal_set_)
+        if(lit.to_variable() == variable)
+            return true;
+
+    return false;
 }
 
 std::string

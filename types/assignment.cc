@@ -39,7 +39,6 @@ pop_literals(std::stack<Literal>& literals) {
     return true;
 }
 
-
 bool
 Assignment::
 remove_literal(const Literal& literal) {

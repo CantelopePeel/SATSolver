@@ -1,5 +1,6 @@
 #include <iostream>
-#include <implication_graph.h>
+#include <cassert>
+#include "../types/implication_graph.h"
 #include "cdcl_solver.h"
 
 using namespace sat_solver;
@@ -13,6 +14,49 @@ get_unassigned_variable(const ClauseList& clause_list, const Assignment& assignm
         }
     }
     return false;
+}
+
+static void
+pop_literals(Assignment* assignment, std::vector<Literal>& recent_literals){
+    while(!recent_literals.empty()){
+        Literal& lit = recent_literals.back();
+        assignment->pop_literal(lit);
+        recent_literals.pop_back();
+    }
+}
+
+static bool should_continue_backtracking(const Clause* clause, Assignment* assignment, std::vector<Literal> recent_literals, ImplicationGraph& implication_graph){
+    // We want to backtrack non-chronologically as much as we can, while still
+    // being able to unit propagate the clause.
+    // So the conditions for stopping backtracking are:
+    //     1. We should be able to unit propagate
+    //     2. If we remove all recent_literals from assignment, then we should not be able to unit propagate.
+
+    int unassigned_literals_found = 0;
+    int recent_literals_found = 0;
+    for(const Literal& lit: clause->literals()){
+        if(!assignment->contains(lit.to_variable())){
+            unassigned_literals_found++;
+        }
+    }
+
+    for(const Literal& lit : recent_literals){
+        if(clause->contains(lit.negate())){
+            recent_literals_found++;
+        }
+    }
+
+    for(const Literal& lit : assignment->literals()){
+    	if(assignment->contains(lit) && assignment->contains(lit.negate())){
+    		return true;
+    	}
+    }
+
+    if(clause->literals().size() == 1){
+    	return (unassigned_literals_found == 0);
+    }
+
+    return (unassigned_literals_found == 0) or ((unassigned_literals_found == 1) and (recent_literals_found == 0));
 }
 
 static SATState
@@ -54,10 +98,20 @@ determine_sat_state(const ClauseList& clause_list, const Assignment& assignment)
 
 static SATState
 backtrack_call(const ClauseList& clause_list, Assignment* assignment,
-               ImplicationGraph* implication_graph,
-               std::unordered_set<Variable>* rollback_variables) {
-    SATState sat_state = determine_sat_state(clause_list, *assignment);
+               ImplicationGraph& implication_graph,
+               const Clause*& rollback_clause, int depth = 0) {
+	std::vector<Literal> recent_literals;
+	implication_graph.unit_propagate(assignment, recent_literals, rollback_clause);
+
+	if(rollback_clause != NULL){
+		pop_literals(assignment, recent_literals);
+
+		return SATState::UNSAT;
+	}
+
+	SATState sat_state = determine_sat_state(clause_list, *assignment);
     if (sat_state == SATState::UNSAT) {
+		pop_literals(assignment, recent_literals);
         // Backtrack!
         return sat_state;
     } else if (sat_state == SATState::UNDEF){
@@ -65,43 +119,43 @@ backtrack_call(const ClauseList& clause_list, Assignment* assignment,
 
         if (get_unassigned_variable(clause_list, *assignment, &var)) {
             Literal literal_choices[] = {Literal(false, var), Literal(true, var)};
-            std::stack<Literal> assigned_literals;
 
-            for(Literal& lit : literal_choices){
-                while(!assigned_literals.empty()){
-                    assigned_literals.pop();
-                }
+            for(int i = 0; i < 2; i++){
+            	Literal& lit = literal_choices[i];
                 assignment->push_literal(lit);
-                assigned_literals.push(lit);
+                recent_literals.push_back(lit);
 
-                implication_graph->unit_propagate(clause_list, assignment, &assigned_literals, rollback_variables);
-
-                if(rollback_variables->count(var)){
-                    rollback_variables->erase(var);
-                }
-
-                if(!rollback_variables->empty()){
-                    assignment->pop_literals(assigned_literals);
-                    return SATState::UNSAT;
-                }
-
-                SATState sat_state = backtrack_call(clause_list, assignment, implication_graph, rollback_variables);
+                SATState sat_state = backtrack_call(clause_list, assignment, implication_graph, rollback_clause, depth + 1);
 
                 if (sat_state == SATState::SAT) {
                     return sat_state;
                 }
 
-                assignment->pop_literals(assigned_literals);
-            }
 
-            return SATState::UNSAT;
-        } else {
-            // Should be impossible to get here.
-            return SATState::UNSAT;
+                if(rollback_clause != NULL){
+                    // One of our descendant function calls reported a conflict.
+                    // We inspect the rollback clause, and see if we should stop backtracking
+                    // at the current level.
+
+                    if(should_continue_backtracking(rollback_clause, assignment, recent_literals, implication_graph)){
+						pop_literals(assignment, recent_literals);
+
+                        return SATState::UNSAT;
+                    }
+
+                }
+
+                assignment->pop_literal(lit);
+            }
         }
+
+		pop_literals(assignment, recent_literals);
+
+        return SATState::UNSAT;
     } else if (sat_state == SATState::SAT){
         return sat_state;
     } else {
+		pop_literals(assignment, recent_literals);
         // Again impossible to get here.
         return SATState::UNSAT;
     }
@@ -110,24 +164,23 @@ backtrack_call(const ClauseList& clause_list, Assignment* assignment,
 SATState
 CDCLSolver::
 check(const ClauseList& clause_list, Assignment* assignment) {
-    ImplicationGraph* implication_graph = new ImplicationGraph(clause_list.variables());
-    std::unordered_set<Variable> rollback_variables;
-    std::stack<Literal> assigned_literals;
-    // propagate unary constraints
-    implication_graph->unit_propagate(clause_list, assignment, &assigned_literals, &rollback_variables);
+    ImplicationGraph implication_graph(clause_list);
+    const Clause* rollback_clause = NULL;
+    std::vector<Literal> recent_literals;
 
-    if(!rollback_variables.empty()){
+    if(rollback_clause != NULL){
         // conflict here means both (P = true) and (P = false) occur as unary clauses.
-        assignment->pop_literals(assigned_literals);
+        pop_literals(assignment, recent_literals);
+
         return SATState::UNSAT;
     }
 
-    SATState is_sat = backtrack_call(clause_list, assignment, implication_graph, &rollback_variables);
+    SATState is_sat = backtrack_call(clause_list, assignment, implication_graph, rollback_clause);
 
     // the literal popping here means that if the clauses are unsatisfiable, the assignment returned
     // will have the same state at function call and function return.
     if(is_sat == SATState::UNSAT){
-        assignment->pop_literals(assigned_literals);
+        pop_literals(assignment, recent_literals);
     }
 
     return is_sat;
