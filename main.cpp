@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <random>
+#include <chrono>
 
 #include "util.h"
 #include "clause_list.h"
@@ -78,8 +79,8 @@ int run_gen_mode(int argc, char* argv[]) {
         return 1;
     }
 
-    outfile_stream << "case_num,num_var,num_clause,k_sat,trial,bt_dec,bt_state,cdcl_dec,cdcl_state,dpll_dec,dpll_state,"
-                      "scho_dec,scho_state\n";
+    outfile_stream << "case_num,num_var,num_clause,k_sat,trial,bt_dec,bt_state,bt_time,cdcl_dec,cdcl_state,cdcl_time,dpll_dec,dpll_state,dpll_time,"
+                      "scho_dec,scho_state,scho_time\n";
 
     for (int num_var = 1; num_var < num_vars + 1; num_var++) {
         std::vector<Literal> literals;
@@ -109,30 +110,45 @@ int run_gen_mode(int argc, char* argv[]) {
                     trial_clause_list.add_clause(clause);
                 }
 
+                std::chrono::high_resolution_clock::time_point start, end;
+                double execution_time;
+
+                start = std::chrono::high_resolution_clock::now();
                 Assignment bt_assn;
                 BacktrackingSolver bt_solver;
                 SATState bt_state = bt_solver.check(trial_clause_list, &bt_assn);
+                end = std::chrono::high_resolution_clock::now();
+                execution_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 
-                outfile_stream << bt_solver.decision_counter() << "," << sat_state_str(bt_state) << ",";
-                
+                outfile_stream << bt_solver.decision_counter() << "," << sat_state_str(bt_state) << "," << execution_time << ",";
+
+                start = std::chrono::high_resolution_clock::now();
                 Assignment cdcl_assn;
                 CDCLSolver cdcl_solver;
                 SATState cdcl_state = cdcl_solver.check(trial_clause_list, &cdcl_assn);
+                end = std::chrono::high_resolution_clock::now();
+                execution_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 
-                outfile_stream << cdcl_solver.decision_counter() << "," << sat_state_str(cdcl_state) << ",";
-                
+                outfile_stream << cdcl_solver.decision_counter() << "," << sat_state_str(cdcl_state) << "," << execution_time << ",";
+
+                start = std::chrono::high_resolution_clock::now();
                 Assignment dpll_assn;
                 DPLLSolver dpll_solver;
                 SATState dpll_state = dpll_solver.check(trial_clause_list, &dpll_assn);
+                end = std::chrono::high_resolution_clock::now();
+                execution_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 
-                outfile_stream << dpll_solver.decision_counter() << "," << sat_state_str(dpll_state) << ",";
-                
+                outfile_stream << dpll_solver.decision_counter() << "," << sat_state_str(dpll_state) << "," << execution_time << ",";
+
+                start = std::chrono::high_resolution_clock::now();
                 Assignment scho_assn;
                 SchoningSolver scho_solver;
                 SATState scho_state = scho_solver.check(trial_clause_list, &scho_assn);
+                end = std::chrono::high_resolution_clock::now();
+                execution_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 
-                outfile_stream << scho_solver.decision_counter() << "," << sat_state_str(scho_state) << ",";
-                
+                outfile_stream << scho_solver.decision_counter() << "," << sat_state_str(scho_state) << "," << execution_time << ",";
+
                 outfile_stream << std::endl;
             }
         }
