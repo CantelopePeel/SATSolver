@@ -5,12 +5,13 @@
 
 #include "dpll_solver.h"
 #include <algorithm>
+#include <cassert>
 #include <iostream>
 
 #define DEBUG 0
 using namespace sat_solver;
 
-bool check_satisfied(const std::vector<Clause> clauses_, 
+bool check_satisfied(const std::vector<Clause> clauses_,
     const Assignment* assignment) {
   bool clause_satisfied_flag = true;
   for (const Clause& clause : clauses_) {
@@ -31,8 +32,8 @@ bool check_satisfied(const std::vector<Clause> clauses_,
 }
 
 static bool
-is_empty(const Clause &c){ 
-  return c.size() == 0; 
+is_empty(const Clause &c){
+  return c.size() == 0;
 }
 
 static bool
@@ -83,7 +84,7 @@ find_pure_literals(std::vector<Clause> &cll,
         lset.insert(l);
       }
     }
-  } 
+  }
   for(Literal l: lset)
     pure_lst.push_back(l);
 }
@@ -128,7 +129,7 @@ break_out:;
   }
 
   std::vector<Literal> pures;
-  find_pure_literals(cll, pures); 
+  find_pure_literals(cll, pures);
   for(Literal l: pures) {
     auto pur_filter = [l](Clause &c) { return c.literals().find(l) != c.literals().end(); };
     cll.erase(std::remove_if(cll.begin(), cll.end(), pur_filter), cll.end());
@@ -137,13 +138,13 @@ break_out:;
     std::cout << l.to_str() << " is pure\n";
 #endif
   }
-  Literal next_literal = *((*(cll.begin())).literals().begin()); 
+  Literal next_literal = *((*(cll.begin())).literals().begin());
 #if DEBUG
   std::cout << "Choosing literal " << next_literal.to_str() << "\n";
 #endif
 
   std::vector<Clause> cpy = cll;
-  simplify_clauses(cpy, next_literal); 
+  simplify_clauses(cpy, next_literal);
 
   if (check(cpy, assignment) == SAT){
     for(Literal l: ll) assignment->push_literal(l);
@@ -152,7 +153,7 @@ break_out:;
 
 #if DEBUG
   std::cout << "Choosing literal " << next_literal.negate().to_str() << "\n";
-#endif 
+#endif
   cpy = cll;
   simplify_clauses(cpy, next_literal.negate());
 

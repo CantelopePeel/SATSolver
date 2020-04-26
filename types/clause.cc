@@ -36,11 +36,6 @@ contains(const Literal& literal) const {
     return literal_set_.count(literal) == 1;
 }
 
-size_t
-Clause::
-size() const {
-  return literal_set_.size();
-
 bool
 Clause::
 contains(const Variable& variable) const {
@@ -49,6 +44,12 @@ contains(const Variable& variable) const {
             return true;
 
     return false;
+}
+
+size_t
+Clause::
+size() const {
+  return literal_set_.size();
 }
 
 std::string
