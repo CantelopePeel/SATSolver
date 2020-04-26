@@ -27,12 +27,6 @@ pop_literals(Assignment* assignment, std::vector<Literal>& recent_literals){
 }
 
 static bool should_continue_backtracking(const Clause* clause, Assignment* assignment, std::vector<Literal> recent_literals, ImplicationGraph& implication_graph){
-    // We want to backtrack non-chronologically as much as we can, while still
-    // being able to unit propagate the clause.
-    // So the conditions for stopping backtracking are:
-    //     1. We should be able to unit propagate
-    //     2. If we remove all recent_literals from assignment, then we should not be able to unit propagate.
-
     int unassigned_literals_found = 0;
     for(const Literal& lit: clause->literals()){
         if(assignment->contains(lit)){
@@ -51,17 +45,16 @@ static bool should_continue_backtracking(const Clause* clause, Assignment* assig
         }
     }
 
+    // Make sure the assignment doesn't contain P and ~P.
     for(const Literal& lit : assignment->literals()){
         if(assignment->contains(lit) && assignment->contains(lit.negate())){
             return true;
         }
     }
 
-    if(clause->literals().size() == 1){
-        return (unassigned_literals_found == 0);
-    }
-
-    return false;
+    // If we can unit propagate now, and we can unit propagate above,
+    // then we backtrack to the upper level.
+    return (unassigned_literals_found == 1) and (unassigned_literals_found_before_recent == 1);
 }
 
 static SATState
