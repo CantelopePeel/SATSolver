@@ -22,17 +22,19 @@ ImplicationGraph(const ClauseList& clause_list){
 bool
 get_single_unassigned_lit_in_clause(const Clause& clause, Assignment* assignment, const Literal*& unassigned_lit){
     int unassigned_literals_found = 0;
-    bool is_satisfied = false;
     for(const Literal& lit: clause.literals()){
         if(assignment->contains(lit)){
-            is_satisfied = true;
+            return false;
         } else if(!assignment->contains(lit.to_variable())){
             unassigned_literals_found++;
             unassigned_lit = &lit;
+            if(unassigned_literals_found >= 2){
+                return false;
+            }
         }
     }
 
-    return (!is_satisfied and unassigned_literals_found == 1);
+    return unassigned_literals_found == 1;
 }
 
 ImplicationGraph::Node&
@@ -54,8 +56,7 @@ add_edge(const Literal& start, const Literal& end){
 bool
 propagate_clauses(ClauseList& clause_list, Assignment* assignment,
                   const Clause*& prop_clause, const Literal*& assigned_literal){
-	for(int i = 0; i < clause_list.clauses().size(); i++){
-		const Clause& clause = clause_list.clauses()[i];
+    for(const Clause& clause : clause_list.clauses()){
         if(get_single_unassigned_lit_in_clause(clause, assignment, assigned_literal)){
             prop_clause = &clause;
             // assigned_literal had its pointed memory value modified in the function call.

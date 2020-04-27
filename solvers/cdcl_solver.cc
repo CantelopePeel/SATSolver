@@ -7,6 +7,18 @@ using namespace sat_solver;
 static bool
 get_unassigned_variable(const ClauseList& clause_list, const Assignment& assignment, Variable* variable) {
     for(const Clause& clause : clause_list.clauses()){
+        bool satisfied = true;
+        for(const Literal& lit : clause.literals()){
+            if(assignment.contains(lit)){
+                satisfied = true;
+                break;
+            }
+        }
+
+        if(satisfied){
+            continue;
+        }
+
         for(const Literal& lit : clause.literals()){
             if(!assignment.contains(lit.to_variable())){
                 *variable = lit.to_variable();
@@ -14,6 +26,14 @@ get_unassigned_variable(const ClauseList& clause_list, const Assignment& assignm
             }
         }
     }
+
+    for(const Variable& var : clause_list.variables()){
+        if(!assignment.contains(var)){
+            *variable = var;
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -36,23 +56,7 @@ static bool should_continue_backtracking(const Clause* clause, Assignment* assig
         }
     }
 
-    int unassigned_literals_found_before_recent = unassigned_literals_found;
-    for(const Literal& lit : recent_literals){
-        assert(assignment->contains(lit));
-
-        if(clause->contains(lit.to_variable())){
-            unassigned_literals_found_before_recent--;
-        }
-    }
-
-    // Make sure the assignment doesn't contain P and ~P.
-    for(const Literal& lit : assignment->literals()){
-        if(assignment->contains(lit) && assignment->contains(lit.negate())){
-            return true;
-        }
-    }
-
-    return false;
+    return (unassigned_literals_found == 0);
 }
 
 static SATState
@@ -128,6 +132,7 @@ backtrack_call(const ClauseList& clause_list, Assignment* assignment,
                     return sat_state;
                 }
 
+                assignment->pop_literal(lit);
 
                 if(rollback_clause != NULL){
                     // One of our descendant function calls reported a conflict.
@@ -140,8 +145,6 @@ backtrack_call(const ClauseList& clause_list, Assignment* assignment,
                         return SATState::UNSAT;
                     }
                 }
-
-                assignment->pop_literal(lit);
             }
         }
 
