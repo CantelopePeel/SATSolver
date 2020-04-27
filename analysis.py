@@ -15,12 +15,15 @@ def analyze():
 
     plt.semilogy(means_dec_df)
     plt.legend(means_dec_df.columns)
+    plt.savefig('results_decision.png')
     plt.show()
+
+    plt.close()
 
     plt.semilogy(means_time_df)
     plt.legend(means_time_df.columns)
     plt.show()
-    plt.savefig('results.png')
+    plt.savefig('results_time.png')
     print(df)
 
 
