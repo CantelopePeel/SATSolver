@@ -41,15 +41,15 @@ ClauseList util::read_dimacs(std::ifstream& input_stream) {
     ClauseList clause_list;
     for (std::string line; std::getline(input_stream, line);) {
         auto tokens = split_string(line, ' ');
-        if (tokens[0] == "p") {
+        if(tokens.size() == 0 or tokens[0] == "c" or tokens[0] == "%" or tokens[0] == "0"){
+            continue;
+        } else if (tokens[0] == "p") {
             // parsed_program_line = true;
             uint64_t num_variables = std::stoul(tokens[2]);
             // num_clauses = std::stoul(tokens[3]);
             for (int i = 1; i < (num_variables + 1); i++) {
                 clause_list.add_variable(Variable(i));
             }
-        } else if (tokens[0] == "c") {
-            continue;
         } else { // This is a clause.
             Clause clause;
             for (const auto& token : tokens) {
