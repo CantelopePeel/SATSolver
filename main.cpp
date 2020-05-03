@@ -47,7 +47,7 @@ int run_file_mode(int argc, char* argv[]) {
         DPLLSolver dpll_solver;
 
         std::chrono::high_resolution_clock::time_point start, end;
-        double cdcl_execution_time, dpll_execution_time;
+        double cdcl_execution_time, dpll_execution_time, scho_execution_time;
 
         start = std::chrono::high_resolution_clock::now();
         Assignment cdcl_assignment;
@@ -63,20 +63,23 @@ int run_file_mode(int argc, char* argv[]) {
 
         dpll_execution_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0;
 
+        start = std::chrono::high_resolution_clock::now();
+        Assignment scho_assn;
+        SchoningSolver scho_solver;
+        SATState scho_is_sat = scho_solver.check(clause_list, &scho_assn);
+        end = std::chrono::high_resolution_clock::now();
+
+        scho_execution_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+
         if(cdcl_is_sat != dpll_is_sat){
             std::printf("Found different result between CDCL and DPLL for input file: %s", argv[2]);
             return -1;
         }
 
-        if(cdcl_execution_time < dpll_execution_time){
-            std::cout << sat_state_str(cdcl_is_sat) << ", CDCL: " << cdcl_execution_time << " ms"
-                                                    << ", DPLL: " << dpll_execution_time << " ms"
-                                                    << std::endl;
-        } else {
-            std::cout << sat_state_str(cdcl_is_sat) << ", DPLL: " << dpll_execution_time << " ms"
-                                                    << ", CDCL: " << cdcl_execution_time << " ms"
-                                                    << std::endl;
-        }
+        std::cout << argv[2] << ','
+                  << sat_state_str(cdcl_is_sat) << ',' << cdcl_solver.decision_counter() << ',' << cdcl_execution_time << ','
+                  << sat_state_str(dpll_is_sat) << ',' << dpll_solver.decision_counter() << ',' << dpll_execution_time << ','
+                  << sat_state_str(scho_is_sat) << ',' << scho_solver.decision_counter() << ',' << scho_execution_time << '\n';
     } else {
         std::printf("Could not open file.\n");
         return 1;
@@ -108,7 +111,7 @@ int run_gen_mode(int argc, char* argv[]) {
         return 1;
     }
 
-    outfile_stream << "case_num,num_var,num_clause,k_sat,trial,bt_dec,bt_state,bt_time,cdcl_dec,cdcl_state,cdcl_time,dpll_dec,dpll_state,dpll_time,"
+    outfile_stream << "case_num,num_var,num_clause,k_sat,trial,cdcl_dec,cdcl_state,cdcl_time,dpll_dec,dpll_state,dpll_time,"
                       "scho_dec,scho_state,scho_time\n";
 
     for (int num_var = 1; num_var < num_vars + 1; num_var++) {

@@ -1,12 +1,12 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import sys
 
-
-def analyze():
-    df = pd.read_csv("./gen_run.csv", index_col=0)
-    print("DPLL correct:\n", (df["bt_state"] == df["dpll_state"]).value_counts())
-    print("CDCL correct:\n", (df["bt_state"] == df["cdcl_state"]).value_counts())
-    print("Schoning correct:\n", (df["bt_state"] == df["scho_state"]).value_counts())
+def analyze(file_name):
+    df = pd.read_csv(file_name, index_col=0)
+    print("DPLL correct:\n", (df["dpll_state"] == df["dpll_state"]).value_counts())
+    print("CDCL correct:\n", (df["dpll_state"] == df["cdcl_state"]).value_counts())
+    print("Schoning correct:\n", (df["dpll_state"] == df["scho_state"]).value_counts())
 
     means_df = df.groupby(["num_var"]).mean()
     means_dec_df = means_df.loc[:, means_df.columns.str.endswith("_dec")]
@@ -28,4 +28,4 @@ def analyze():
 
 
 if __name__ == "__main__":
-    analyze()
+    analyze(sys.argv[1])

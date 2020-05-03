@@ -1,3 +1,4 @@
+num_var,num_trial,cdcl_state,cdcl_dec,cdcl_time,dpll_state,dpll_dec,dpll_time,scho_state,scho_dec,scho_time
 20,1,SAT,6,0.1,SAT,14,0.783,UNDEF,84,0.271
 20,2,SAT,7,0.116,SAT,12,1.112,SAT,42,0.141
 20,3,SAT,5,0.083,SAT,14,1.47,UNDEF,84,0.266
