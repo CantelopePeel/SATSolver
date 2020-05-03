@@ -1,85 +1,86 @@
 #include <iostream>
 #include <cassert>
+#include <queue>
 #include "cdcl_solver.h"
 
 using namespace sat_solver;
+// INF is assumed to be a depth that is unreachable in practice.
+#define INF 1000000000
 
-static bool
-get_unassigned_variable(const ClauseList& clause_list, const Assignment& assignment, Variable* variable) {
-    for(const Clause& clause : clause_list.clauses()){
-        bool satisfied = true;
-        for(const Literal& lit : clause.literals()){
-            if(assignment.contains(lit)){
-                satisfied = true;
-                break;
+bool
+CDCLSolver::
+get_unassigned_variable(int* variable, int depth) {
+    int best_variable_clauses = 0;
+
+    for(int i = 0; i < variable_count; i++){
+        if(variable_assignment[i] == 0 or variable_assignment_depth[i] > depth){
+            int curr_variable_clauses = 0;
+            for(const int &clause : variable_to_clause[i]){
+                if(clause_satisfied_literals[clause] == 0){
+                    curr_variable_clauses++;
+                }
+            }
+
+            // we prefer to choose the variable involved in the most unsatisfied clauses.
+            // This is because CDCL "likes" conflicts.
+            if(best_variable_clauses < curr_variable_clauses){
+                best_variable_clauses = curr_variable_clauses;
+                *variable = i;
             }
         }
+    }
 
-        if(satisfied){
+    return (best_variable_clauses > 0);
+}
+
+void
+CDCLSolver::
+set_literal(int lit, int depth){
+    int var = std::abs(lit) - 1;
+    assert(variable_assignment[var] == 0 or variable_assignment_depth[var] > depth);
+
+    variable_assignment[var] = (lit > 0) ? 1 : -1;
+    variable_assignment_depth[var] = depth;
+
+    for(const int& clause : variable_to_clause[var]){
+        for(const int& ite_lit : mini_clause_list[clause]){
+            if(ite_lit == lit){
+                clause_satisfied_literals[clause]++;
+                clause_unassigned_literals[clause]--;
+            } else if(ite_lit == -lit){
+                clause_unassigned_literals[clause]--;
+            }
+        }
+    }
+}
+
+void
+CDCLSolver::
+unset_literal(int lit){
+    int var = std::abs(lit) - 1;
+    assert(variable_assignment[var] != 0 and variable_assignment_depth[var] != INF);
+
+    variable_assignment[var] = 0;
+    variable_assignment_depth[var] = INF;
+    for(const int& clause : variable_to_clause[var]){
+        for(const int& ite_lit : mini_clause_list[clause]){
+            if(ite_lit == lit){
+                clause_satisfied_literals[clause]--;
+                clause_unassigned_literals[clause]++;
+            } else if(ite_lit == -lit){
+                clause_unassigned_literals[clause]++;
+            }
+        }
+    }
+}
+
+SATState
+CDCLSolver::
+determine_sat_state(int depth) {
+    for (int i = 0; i < mini_clause_list.size(); i++) {
+        if(clause_satisfied_literals[i] > 0){
             continue;
-        }
-
-        for(const Literal& lit : clause.literals()){
-            if(!assignment.contains(lit.to_variable())){
-                *variable = lit.to_variable();
-                return true;
-            }
-        }
-    }
-
-    for(const Variable& var : clause_list.variables()){
-        if(!assignment.contains(var)){
-            *variable = var;
-            return true;
-        }
-    }
-
-    return false;
-}
-
-static void
-pop_literals(Assignment* assignment, std::vector<Literal>& recent_literals){
-    while(!recent_literals.empty()){
-        Literal& lit = recent_literals.back();
-        assignment->pop_literal(lit);
-        recent_literals.pop_back();
-    }
-}
-
-static bool should_continue_backtracking(const Clause* clause, Assignment* assignment, std::vector<Literal> recent_literals, ImplicationGraph& implication_graph){
-    int unassigned_literals_found = 0;
-    for(const Literal& lit: clause->literals()){
-        if(assignment->contains(lit)){
-            return false;
-        } else if(!assignment->contains(lit.negate())){
-            unassigned_literals_found++;
-        }
-    }
-
-    return (unassigned_literals_found == 0);
-}
-
-static SATState
-determine_sat_state(const ClauseList& clause_list, const Assignment& assignment) {
-    for (const Clause& clause : clause_list.clauses()) {
-        bool sat_clause = false;
-        bool unsat_clause = true;
-        for (const Literal& clause_lit : clause.literals()) {
-            auto neg_clause_lit = clause_lit.negate();
-            if (assignment.contains(clause_lit)) {
-                // Clause satisfied, check next.
-                sat_clause = true;
-                break;
-            } else {
-                unsat_clause &= assignment.contains(neg_clause_lit);
-            }
-        }
-
-        if (sat_clause) {
-            continue;
-        }
-
-        if (unsat_clause) {
+        } else if(clause_unassigned_literals[i] == 0){
             return SATState::UNSAT;
         } else {
             return SATState::UNDEF;
@@ -96,90 +97,209 @@ determine_sat_state(const ClauseList& clause_list, const Assignment& assignment)
     return SATState::SAT;
 }
 
-SATState
+bool
 CDCLSolver::
-backtrack_call(const ClauseList& clause_list, Assignment* assignment,
-               ImplicationGraph& implication_graph,
-               const Clause*& rollback_clause, int depth) {
-    std::vector<Literal> recent_literals;
-    implication_graph.unit_propagate(assignment, recent_literals, rollback_clause);
-    decision_counter_ += recent_literals.size();
+unit_propagate(int depth, std::unordered_set<int> &propagated_literals){
+    bool change = false;
 
-    if(rollback_clause != NULL){
-        pop_literals(assignment, recent_literals);
+    std::unordered_set<int> antecedents;
+    std::queue<int> inspect;
 
-        return SATState::UNSAT;
+    for(int i = 0; i < mini_clause_list.size(); i++){
+        if(clause_satisfied_literals[i] == 0 and clause_unassigned_literals[i] <= 1){
+            inspect.push(i);
+        }
     }
 
-    SATState sat_state = determine_sat_state(clause_list, *assignment);
-    if (sat_state == SATState::UNSAT) {
-        pop_literals(assignment, recent_literals);
-        // Backtrack!
-        return sat_state;
-    } else if (sat_state == SATState::UNDEF){
-        Variable var(0);
+    while(!inspect.empty()){
+        int cl = inspect.front();
+        inspect.pop();
 
-        if (get_unassigned_variable(clause_list, *assignment, &var)) {
-            Literal literal_choices[] = {Literal(false, var), Literal(true, var)};
+        if(clause_satisfied_literals[cl] > 0 or clause_unassigned_literals[cl] >= 2){
+            continue;
+        } else if(clause_unassigned_literals[cl] == 0) {
+            //conflict!
 
-            for(int i = 0; i < 2; i++){
-                Literal& lit = literal_choices[i];
-                assignment->push_literal(lit);
-                increment_decision_counter();
-                SATState sat_state = backtrack_call(clause_list, assignment, implication_graph, rollback_clause, depth + 1);
+            std::vector<int> new_clause;
 
-                if (sat_state == SATState::SAT) {
-                    return sat_state;
+            // The new clause says that to avoid the conflict in the future, some step
+            // along the propagation process must fail.
+            for(const int &lit : antecedents){
+                // We make sure not to include the resolved variable.
+                if(antecedents.count(-lit) == 0){
+                    new_clause.push_back(lit);
                 }
+            }
 
-                assignment->pop_literal(lit);
+            // since the same conflict clause can be derived from different propagations,
+            // we make sure not to add a duplicate.
+            bool duplicate = false;
+            for(const std::vector<int>& clause : mini_clause_list){
+                if(clause == new_clause){
+                    duplicate = true;
+                    break;
+                }
+            }
 
-                if(rollback_clause != NULL){
-                    // One of our descendant function calls reported a conflict.
-                    // We inspect the rollback clause, and see if we should stop backtracking
-                    // at the current level.
+            if(new_clause.size() != 0 and !duplicate){
+                mini_clause_list.push_back(new_clause);
 
-                    if(should_continue_backtracking(rollback_clause, assignment, recent_literals, implication_graph)){
-                        pop_literals(assignment, recent_literals);
+                clause_unassigned_literals.push_back(0);
+                clause_satisfied_literals.push_back(0);
 
-                        return SATState::UNSAT;
+                for(const int& lit : new_clause){
+                    int var = std::abs(lit) - 1;
+                    variable_to_clause[var].push_back(mini_clause_list.size() - 1);
+                    if(variable_assignment[var] == 0 or variable_assignment_depth[var] > depth){
+                        clause_unassigned_literals[mini_clause_list.size() - 1]++;
+                    } else if((variable_assignment[var] > 0) == (lit > 0)){
+                        clause_satisfied_literals[mini_clause_list.size() - 1]++;
                     }
                 }
             }
-        }
 
-        pop_literals(assignment, recent_literals);
+            for(const int& lit : propagated_literals){
+                unset_literal(lit);
+            }
+            // learn a new clause based on the antecedent literals.
+
+            return true;
+        } else {
+            // unit propagation!
+
+            int unassigned_lit = 0;
+            for(const int& lit : mini_clause_list[cl]){
+                int var = std::abs(lit) - 1;
+                if(variable_assignment[var] == 0 or variable_assignment_depth[var] > depth){
+                    unassigned_lit = lit;
+                    break;
+                }
+            }
+
+            assert(unassigned_lit != 0);
+            int var = std::abs(unassigned_lit) - 1;
+
+            // we store all of the literals affecting the propagation in antecedents, so that if
+            // we get a conflict later on, we would know the trouble-making literals.
+            for(const int& lit : mini_clause_list[cl]){
+                antecedents.insert(lit);
+            }
+            propagated_literals.insert(unassigned_lit);
+
+            set_literal(unassigned_lit, depth);
+            for(const int& clause : variable_to_clause[var]){
+                inspect.push(clause);
+            }
+        }
+    }
+
+    return false;
+}
+
+SATState
+CDCLSolver::
+backtrack_call(int depth) {
+    std::unordered_set<int> propagated_literals;
+    bool conflict = unit_propagate(depth, propagated_literals);
+
+    if(conflict){
+        return SATState::UNSAT;
+    }
+
+    SATState sat_state = determine_sat_state(depth);
+    if (sat_state == SATState::UNSAT) {
+        for(int lit : propagated_literals){
+            unset_literal(lit);
+        }
+        // Backtrack!
+        return sat_state;
+    } else if (sat_state == SATState::UNDEF){
+        int var;
+
+        if (get_unassigned_variable(&var, depth)) {
+            set_literal(var + 1, depth);
+            increment_decision_counter();
+
+            SATState sat_state = backtrack_call(depth + 1);
+            if(sat_state == SATState::SAT){
+                return sat_state;
+            }
+
+            unset_literal(var + 1);
+            set_literal(-(var + 1), depth);
+            sat_state = backtrack_call(depth + 1);
+            if(sat_state == SATState::SAT){
+                return sat_state;
+            }
+
+            unset_literal(-(var + 1));
+            for(int lit : propagated_literals){
+                unset_literal(lit);
+            }
+        }
 
         return SATState::UNSAT;
     } else if (sat_state == SATState::SAT){
         return sat_state;
     } else {
-        pop_literals(assignment, recent_literals);
         // Again impossible to get here.
         return SATState::UNSAT;
+    }
+}
+
+void
+CDCLSolver::
+initialize(const ClauseList& clause_list){
+    variable_count = clause_list.variables().size();
+    variable_assignment.resize(variable_count, 0);
+    variable_assignment_depth.resize(variable_count, INF);
+    mini_clause_list.resize(clause_list.clauses().size());
+    clause_satisfied_literals.resize(clause_list.clauses().size());
+    clause_unassigned_literals.resize(clause_list.clauses().size());
+    starting_clause_list_size = clause_list.clauses().size();
+    variable_to_clause.resize(variable_count);
+
+    int i = 0; // we have to use a separte index, as clauses is iterable but not indexable.
+    for(const Clause& clause : clause_list.clauses()){
+        clause_satisfied_literals[i] = 0;
+        clause_unassigned_literals[i] = clause.literals().size();
+
+        for(const Literal& lit : clause.literals()){
+            if(lit.sign()){
+                mini_clause_list[i].push_back(-((int) lit.to_variable() + 1));
+                variable_to_clause[lit.to_variable()].push_back(i);
+            } else {
+                mini_clause_list[i].push_back((int) lit.to_variable() + 1);
+                variable_to_clause[lit.to_variable()].push_back(i);
+            }
+        }
+
+        i++;
     }
 }
 
 SATState
 CDCLSolver::
 check(const ClauseList& clause_list, Assignment* assignment) {
-    ImplicationGraph implication_graph(clause_list);
-    const Clause* rollback_clause = NULL;
-    std::vector<Literal> recent_literals;
+    initialize(clause_list);
+    std::unordered_set<int> propagated_literals;
+    bool conflict = unit_propagate(0, propagated_literals);
 
-    if(rollback_clause != NULL){
+    if(conflict){
         // conflict here means both (P = true) and (P = false) occur as unary clauses.
-        pop_literals(assignment, recent_literals);
-
         return SATState::UNSAT;
     }
 
-    SATState is_sat = backtrack_call(clause_list, assignment, implication_graph, rollback_clause);
+    SATState is_sat = backtrack_call(1);
 
-    // the literal popping here means that if the clauses are unsatisfiable, the assignment returned
-    // will have the same state at function call and function return.
     if(is_sat == SATState::UNSAT){
-        pop_literals(assignment, recent_literals);
+        return SATState::UNSAT;
+    }
+
+    for(int i = 0; i < variable_count; i++){
+        if(variable_assignment[i] != 0 and variable_assignment_depth[i] < INF){
+            assignment->push_literal(Literal((variable_assignment[i] < 0), Variable(i)));
+        }
     }
 
     return is_sat;
