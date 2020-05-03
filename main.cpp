@@ -43,11 +43,40 @@ int run_file_mode(int argc, char* argv[]) {
 
     if (file_stream.is_open()) {
         ClauseList clause_list = util::read_dimacs(file_stream);
-        DPLLSolver solver;
+        CDCLSolver cdcl_solver;
+        DPLLSolver dpll_solver;
 
-        Assignment assignment;
-        SATState is_sat = solver.check(clause_list, &assignment);
-        std::cout << sat_state_str(is_sat) << std::endl;
+        std::chrono::high_resolution_clock::time_point start, end;
+        double cdcl_execution_time, dpll_execution_time;
+
+        start = std::chrono::high_resolution_clock::now();
+        Assignment cdcl_assignment;
+        SATState cdcl_is_sat = cdcl_solver.check(clause_list, &cdcl_assignment);
+        end = std::chrono::high_resolution_clock::now();
+
+        cdcl_execution_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0;
+
+        start = std::chrono::high_resolution_clock::now();
+        Assignment dpll_assignment;
+        SATState dpll_is_sat = dpll_solver.check(clause_list, &dpll_assignment);
+        end = std::chrono::high_resolution_clock::now();
+
+        dpll_execution_time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.0;
+
+        if(cdcl_is_sat != dpll_is_sat){
+            std::printf("Found different result between CDCL and DPLL for input file: %s", argv[2]);
+            return -1;
+        }
+
+        if(cdcl_execution_time < dpll_execution_time){
+            std::cout << sat_state_str(cdcl_is_sat) << ", CDCL: " << cdcl_execution_time << " ms"
+                                                    << ", DPLL: " << dpll_execution_time << " ms"
+                                                    << std::endl;
+        } else {
+            std::cout << sat_state_str(cdcl_is_sat) << ", DPLL: " << dpll_execution_time << " ms"
+                                                    << ", CDCL: " << cdcl_execution_time << " ms"
+                                                    << std::endl;
+        }
     } else {
         std::printf("Could not open file.\n");
         return 1;
@@ -112,15 +141,6 @@ int run_gen_mode(int argc, char* argv[]) {
 
                 std::chrono::high_resolution_clock::time_point start, end;
                 double execution_time;
-
-                start = std::chrono::high_resolution_clock::now();
-                Assignment bt_assn;
-                BacktrackingSolver bt_solver;
-                SATState bt_state = bt_solver.check(trial_clause_list, &bt_assn);
-                end = std::chrono::high_resolution_clock::now();
-                execution_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-
-                outfile_stream << bt_solver.decision_counter() << "," << sat_state_str(bt_state) << "," << execution_time << ",";
 
                 start = std::chrono::high_resolution_clock::now();
                 Assignment cdcl_assn;
