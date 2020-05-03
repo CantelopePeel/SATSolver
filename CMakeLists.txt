@@ -10,8 +10,7 @@ add_library(types
         types/literal.h types/literal.cc
         types/clause.h types/clause.cc
         types/clause_list.h types/clause_list.cc
-        types/assignment.h types/assignment.cc
-        types/implication_graph.h types/implication_graph.cc)
+        types/assignment.h types/assignment.cc)
 include_directories(types PUBLIC ${CMAKE_SOURCE_DIR}/types/)
 
 add_library(solvers
